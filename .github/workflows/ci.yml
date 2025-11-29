@@ -63,6 +63,8 @@ jobs:
       contents: read
 
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download test artifacts
         uses: actions/download-artifact@v4
         with:
