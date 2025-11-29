@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint and Format
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Commit-lint
+        uses: opensource-nepal/commitlint@v1
+
+      - name: Scalafmt
+        uses: jrouly/scalafmt-native-action@v4
+
+  buildAndTest:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Build
+        run: sbt compile
+
+      - name: Test
+        run: sbt test
+        continue-on-error: true
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: target/test-reports/
+
+  report:
+    name: Report
+    needs: buildAndTest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-reports
+          path: target/test-reports/
+
+      - name: Report
+        uses: dorny/test-reporter@v2
+        with:
+          name: Scala Tests
+          path: target/test-reports/*.xml
+          reporter: java-junit
